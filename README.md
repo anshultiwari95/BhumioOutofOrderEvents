@@ -4,23 +4,19 @@ Processes events that arrive in random order. Maintains a correct list of active
 
 ## Implementation
 
-- **`src/eventProcessor.js`**: Core logic
-  - `processEvents(events)` — Batch processing (O(1) per event)
-  - `createEventProcessor()` — Streaming API with `addEvent()`, `getActiveItems()`, `reset()`
+**Core logic** (`src/eventProcessor.js`):
 
-Rules: process in arrival order, no full-list sort. Uses a `Map` for items and a `Set` for deleted IDs.
+- `processEvents(events)` — batch process an array of events
+- `createEventProcessor()` — streaming API: `addEvent()`, `getActiveItems()`, `reset()`
+
+Events are processed in arrival order only (no sorting). Uses a `Map` for items and a `Set` for deleted IDs.
 
 ## Edge Cases Handled
 
-| Edge case | Behavior |
-|-----------|----------|
-| **Late create after delete** | Once an item is deleted, it never reappears. A late `created` event (e.g. timestamp 50 arriving after `deleted` at 200) is ignored. |
-| **Duplicate events** | Idempotent. Duplicate `created` overwrites; duplicate `updated` merges; duplicate `deleted` no-ops (already gone). |
-| **Update before create** | `updated` for an unknown id is ignored. |
-| **Delete before create** | If `deleted` arrives first, we add the id to a tombstone set. When `created` arrives later, it is ignored. |
-| **Out-of-order sequence** | Strict arrival order. Each event is processed once; timestamp is not used for ordering. |
-
-**Tombstone rule**: `deletedIds` is permanent for the session. No create or update can bring back a deleted id.
+- **Late create after delete** — Once deleted, an item never reappears. Late `created` events are ignored.
+- **Duplicate events** — Idempotent: same event applied twice has the same effect.
+- **Update before create** — `updated` for an unknown id is ignored.
+- **Delete before create** — If `deleted` arrives first, later `created` is ignored.
 
 ## Run
 
